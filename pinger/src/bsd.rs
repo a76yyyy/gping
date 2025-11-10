@@ -1,6 +1,11 @@
 use crate::{extract_regex, PingCreationError, PingOptions, PingResult, Pinger};
 use lazy_regex::*;
 
+#[cfg(feature = "async")]
+use crate::AsyncPinger;
+#[cfg(feature = "async")]
+use async_trait::async_trait;
+
 pub static RE: Lazy<Regex> = lazy_regex!(r"time=(?:(?P<ms>[0-9]+).(?P<ns>[0-9]+)\s+ms)");
 
 pub struct BSDPinger {
@@ -19,6 +24,44 @@ pub(crate) fn parse_bsd(line: String) -> Option<PingResult> {
 
 impl Pinger for BSDPinger {
     fn from_options(options: PingOptions) -> Result<Self, PingCreationError>
+    where
+        Self: Sized,
+    {
+        Ok(Self { options })
+    }
+
+    fn parse_fn(&self) -> fn(String) -> Option<PingResult> {
+        parse_bsd
+    }
+
+    fn ping_args(&self) -> (&str, Vec<String>) {
+        let mut args = vec![format!(
+            "-i{:.1}",
+            self.options.interval.as_millis() as f32 / 1_000_f32
+        )];
+        if let Some(interface) = &self.options.interface {
+            args.push("-I".into());
+            args.push(interface.clone());
+        }
+        if let Some(raw_args) = &self.options.raw_arguments {
+            args.extend(raw_args.iter().cloned());
+        }
+        args.push(self.options.target.to_string());
+        ("ping", args)
+    }
+}
+
+// =================== Async Implementation ===================
+
+#[cfg(feature = "async")]
+pub struct BSDAsyncPinger {
+    options: PingOptions,
+}
+
+#[cfg(feature = "async")]
+#[async_trait]
+impl AsyncPinger for BSDAsyncPinger {
+    async fn from_options(options: PingOptions) -> Result<Self, PingCreationError>
     where
         Self: Sized,
     {
