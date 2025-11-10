@@ -175,13 +175,15 @@ impl AsyncPinger for WindowsAsyncPinger {
         unimplemented!("ping_args for WindowsAsyncPinger is not implemented")
     }
 
-    async fn start(&self) -> Result<tokio::sync::mpsc::Receiver<PingResult>, PingCreationError> {
+    async fn start(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<PingResult>, PingCreationError> {
         let interval = self.options.interval;
 
         // Resolve target IP address
         let parsed_ip = resolve_target(&self.options.target)?;
 
-        let (tx, rx) = tokio::sync::mpsc::channel(100);
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
             // Create and configure async pinger
@@ -201,7 +203,7 @@ impl AsyncPinger for WindowsAsyncPinger {
                             Duration::from_millis(rtt as u64),
                             format!("Reply from {}: time={}ms", parsed_ip, rtt),
                         );
-                        if tx.send(result).await.is_err() {
+                        if tx.send(result).is_err() {
                             break;
                         }
                     }
@@ -210,15 +212,14 @@ impl AsyncPinger for WindowsAsyncPinger {
                             e,
                             parsed_ip,
                             || {
-                                // Use blocking send because we're in a closure
-                                tx.blocking_send(PingResult::Timeout(format!(
+                                tx.send(PingResult::Timeout(format!(
                                     "Request timeout for {}",
                                     parsed_ip
                                 )))
                                 .is_ok()
                             },
                             || {
-                                let _ = tx.blocking_send(PingResult::PingExited(
+                                let _ = tx.send(PingResult::PingExited(
                                     std::process::ExitStatus::default(),
                                     format!("Ping error: {:?}", e),
                                 ));
