@@ -80,8 +80,10 @@ impl AsyncPinger for FakeAsyncPinger {
         unimplemented!("ping_args not implemented for FakeAsyncPinger")
     }
 
-    async fn start(&self) -> Result<tokio::sync::mpsc::Receiver<PingResult>, PingCreationError> {
-        let (tx, rx) = tokio::sync::mpsc::channel(100);
+    async fn start(
+        &self,
+    ) -> Result<tokio::sync::mpsc::UnboundedReceiver<PingResult>, PingCreationError> {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let sleep_time = self.options.interval;
 
         // Use true async task
@@ -96,7 +98,7 @@ impl AsyncPinger for FakeAsyncPinger {
                     format!("Fake ping line: {fake_seconds} ms"),
                 );
 
-                if tx.send(ping_result).await.is_err() {
+                if tx.send(ping_result).is_err() {
                     break;
                 }
 

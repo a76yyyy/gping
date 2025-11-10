@@ -302,6 +302,7 @@ mod async_tests {
         Ok(())
     }
 
+    #[cfg(feature = "fake-ping")]
     #[tokio::test]
     #[timeout(10_000)]
     async fn test_async_fake_ping() {
