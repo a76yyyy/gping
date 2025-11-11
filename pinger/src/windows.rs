@@ -39,7 +39,7 @@ fn create_async_pinger(interval: Duration) -> AsyncWinPinger {
 /// Handle ping errors, distinguish between timeout and other errors
 fn handle_ping_error(
     error: WinPingError,
-    target_ip: IpAddr,
+    _target_ip: IpAddr,
     send_timeout: impl FnOnce() -> bool,
     send_error: impl FnOnce() -> bool,
 ) -> bool {
@@ -50,14 +50,30 @@ fn handle_ping_error(
         }
         _ => {
             // Other errors - send error and exit
-            eprintln!("Ping error for {}: {:?}", target_ip, error);
             send_error();
             false
         }
     }
 }
 
-/// Calculate wait time for next ping, compensating for ping duration
+/// Calculate wait time for next ping, compensating for ping duration.
+///
+/// Uses saturating_sub to ensure non-negative duration (returns 0 if elapsed >= interval).
+///
+/// # TODO: Cumulative Time Drift
+/// The current implementation may accumulate timing drift over long periods because
+/// we update `last_ping_time` after sleeping. A more precise approach would be to
+/// calculate the absolute next ping time and sleep until that time.
+///
+/// Example of improved approach:
+/// ```ignore
+/// let next_ping_time = last_ping_time + interval;
+/// let now = Instant::now();
+/// if next_ping_time > now {
+///     thread::sleep(next_ping_time - now);
+/// }
+/// last_ping_time = next_ping_time;
+/// ```
 fn calculate_wait_time(last_ping_time: Instant, interval: Duration) -> Duration {
     let elapsed = last_ping_time.elapsed();
     interval.saturating_sub(elapsed)
@@ -96,11 +112,11 @@ impl Pinger for WindowsPinger {
         thread::spawn(move || {
             // Create and configure pinger
             let pinger = create_pinger(interval);
-            let mut buffer = Buffer::new();
             let mut last_ping_time = Instant::now();
 
             loop {
                 // Send ping request
+                let mut buffer = Buffer::new();
                 match pinger.send(parsed_ip, &mut buffer) {
                     Ok(rtt) => {
                         let result = PingResult::Pong(
@@ -125,7 +141,7 @@ impl Pinger for WindowsPinger {
                             || {
                                 let _ = tx.send(PingResult::PingExited(
                                     std::process::ExitStatus::default(),
-                                    format!("Ping error: {:?}", e),
+                                    e.to_string(),
                                 ));
                                 true
                             },
@@ -221,7 +237,7 @@ impl AsyncPinger for WindowsAsyncPinger {
                             || {
                                 let _ = tx.send(PingResult::PingExited(
                                     std::process::ExitStatus::default(),
-                                    format!("Ping error: {:?}", e),
+                                    e.to_string(),
                                 ));
                                 true
                             },
