@@ -1,40 +1,41 @@
-/// Pinger
-/// This crate exposes a simple function to ping remote hosts across different operating systems.
-///
-/// # Synchronous Example:
-/// ```no_run
-/// use std::time::Duration;
-/// use pinger::{ping, PingResult, PingOptions};
-/// let options = PingOptions::new("tomforb.es".to_string(), Duration::from_secs(1), None);
-/// let stream = ping(options).expect("Error pinging");
-/// for message in stream {
-///     match message {
-///         PingResult::Pong(duration, line) => println!("{:?} (line: {})", duration, line),
-///         PingResult::Timeout(_) => println!("Timeout!"),
-///         PingResult::Unknown(line) => println!("Unknown line: {}", line),
-///         PingResult::PingExited(_code, _stderr) => {}
-///     }
-/// }
-/// ```
-///
-/// # Asynchronous Example (requires `async` feature):
-/// ```no_run
-/// # #[cfg(feature = "async")]
-/// # async fn example() {
-/// use std::time::Duration;
-/// use pinger::{ping_async, PingResult, PingOptions};
-/// let options = PingOptions::new("tomforb.es".to_string(), Duration::from_secs(1), None);
-/// let mut stream = ping_async(options).await.expect("Error pinging");
-/// while let Some(message) = stream.recv().await {
-///     match message {
-///         PingResult::Pong(duration, line) => println!("{:?} (line: {})", duration, line),
-///         PingResult::Timeout(_) => println!("Timeout!"),
-///         PingResult::Unknown(line) => println!("Unknown line: {}", line),
-///         PingResult::PingExited(_code, _stderr) => {}
-///     }
-/// }
-/// # }
-/// ```
+//! Pinger
+//! This crate exposes a simple function to ping remote hosts across different operating systems.
+//!
+//! # Synchronous Example:
+//! ```no_run
+//! use std::time::Duration;
+//! use pinger::{ping, PingResult, PingOptions};
+//! let options = PingOptions::new("tomforb.es".to_string(), Duration::from_secs(1), None);
+//! let stream = ping(options).expect("Error pinging");
+//! for message in stream {
+//!     match message {
+//!         PingResult::Pong(duration, line) => println!("{:?} (line: {})", duration, line),
+//!         PingResult::Timeout(_) => println!("Timeout!"),
+//!         PingResult::Unknown(line) => println!("Unknown line: {}", line),
+//!         PingResult::PingExited(_code, _stderr) => {}
+//!     }
+//! }
+//! ```
+//!
+//! # Asynchronous Example (requires `async` feature):
+//! ```no_run
+//! # #[cfg(feature = "async")]
+//! # async fn example() {
+//! use std::time::Duration;
+//! use pinger::{ping_async, PingResult, PingOptions};
+//! let options = PingOptions::new("tomforb.es".to_string(), Duration::from_secs(1), None);
+//! let mut stream = ping_async(options).await.expect("Error pinging");
+//! while let Some(message) = stream.recv().await {
+//!     match message {
+//!         PingResult::Pong(duration, line) => println!("{:?} (line: {})", duration, line),
+//!         PingResult::Timeout(_) => println!("Timeout!"),
+//!         PingResult::Unknown(line) => println!("Unknown line: {}", line),
+//!         PingResult::PingExited(_code, _stderr) => {}
+//!     }
+//! }
+//! # }
+//! ```
+
 use lazy_regex::Regex;
 use std::ffi::OsStr;
 use std::fmt::{Debug, Formatter};
@@ -264,12 +265,12 @@ pub trait AsyncPinger: Send + Sync {
                             // wait failed
                             let _ = tx.send(PingResult::PingExited(
                                 ExitStatus::default(),
-                                format!("Failed to wait for child: {}. Stderr: {}", e, stderr_content),
+                                format!("Failed to wait for child: {e}. Stderr: {stderr_content}"),
                             ));
                         }
                     }
                 }
-                _ = tokio::time::sleep(Duration::from_secs(5)) => {
+                () = tokio::time::sleep(Duration::from_secs(5)) => {
                     // Timeout, force kill process
                     let _ = child.kill().await;
 
@@ -278,7 +279,7 @@ pub trait AsyncPinger: Send + Sync {
 
                     let _ = tx.send(PingResult::PingExited(
                         ExitStatus::default(),
-                        format!("Process killed after timeout. Stderr: {}", stderr_content),
+                        format!("Process killed after timeout. Stderr: {stderr_content}"),
                     ));
                 }
             }

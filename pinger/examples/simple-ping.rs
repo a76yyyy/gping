@@ -10,12 +10,12 @@ pub fn main() {
     for message in stream.into_iter().take(LIMIT) {
         match message {
             pinger::PingResult::Pong(duration, line) => {
-                println!("Duration: {:?}\t\t(raw: {:?})", duration, line)
+                println!("Duration: {duration:?}\t\t(raw: {line:?})");
             }
             pinger::PingResult::Timeout(line) => println!("Timeout! (raw: {line:?})"),
-            pinger::PingResult::Unknown(line) => println!("Unknown line: {:?}", line),
+            pinger::PingResult::Unknown(line) => println!("Unknown line: {line:?}"),
             pinger::PingResult::PingExited(code, stderr) => {
-                panic!("Ping exited! Code: {:?}. Stderr: {:?}", code, stderr)
+                panic!("Ping exited! Code: {code:?}. Stderr: {stderr:?}")
             }
         }
     }

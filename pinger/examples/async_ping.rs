@@ -22,29 +22,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             PingResult::Pong(duration, line) => {
                 println!("✓ Pong #{}: {:?}", count + 1, duration);
                 if !line.is_empty() {
-                    println!("  Raw: {}", line);
+                    println!("  Raw: {line}");
                 }
                 count += 1;
                 if count >= max_pings {
-                    println!("\nReceived {} pings, stopping...", max_pings);
+                    println!("\nReceived {max_pings} pings, stopping...");
                     break;
                 }
             }
             PingResult::Timeout(line) => {
                 println!("✗ Timeout");
                 if !line.is_empty() {
-                    println!("  Raw: {}", line);
+                    println!("  Raw: {line}");
                 }
             }
             PingResult::PingExited(status, stderr) => {
-                println!("\n⚠ Ping process exited: {}", status);
+                println!("\n⚠ Ping process exited: {status}");
                 if !stderr.is_empty() {
-                    println!("  Stderr: {}", stderr);
+                    println!("  Stderr: {stderr}");
                 }
                 break;
             }
             PingResult::Unknown(line) => {
-                println!("? Unknown: {}", line);
+                println!("? Unknown: {line}");
             }
         }
     }
