@@ -1,5 +1,5 @@
 use crate::{extract_regex, PingCreationError, PingOptions, PingResult, Pinger};
-use lazy_regex::*;
+use lazy_regex::{lazy_regex, Lazy, Regex};
 
 #[cfg(feature = "async")]
 use crate::AsyncPinger;

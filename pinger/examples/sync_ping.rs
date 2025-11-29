@@ -1,9 +1,12 @@
-/// 同步 ping 示例
-///
-/// 运行方式:
-/// ```bash
-/// cargo run --example sync_ping
-/// ```
+//! 同步 ping 示例
+//!
+//! 运行方式:
+//! ```bash
+//! cargo run --example sync_ping
+//! ```
+
+#![allow(clippy::print_stdout)]
+
 use pinger::{ping, PingOptions, PingResult};
 use std::time::Duration;
 

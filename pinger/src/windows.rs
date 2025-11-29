@@ -1,3 +1,5 @@
+//! Windows-specific ping implementation
+
 use crate::utils::resolve_target;
 use crate::PingCreationError;
 use crate::{extract_regex, PingOptions, PingResult, Pinger};

@@ -1,3 +1,5 @@
+#![allow(clippy::print_stdout, clippy::panic, clippy::expect_used)]
+
 use pinger::{ping, PingOptions};
 
 const LIMIT: usize = 3;

@@ -1,9 +1,12 @@
-/// 异步 ping 示例
-///
-/// 运行方式:
-/// ```bash
-/// cargo run --example async_ping --features async
-/// ```
+//! 异步 ping 示例
+//!
+//! 运行方式:
+//! ```bash
+//! cargo run --example async_ping --features async
+//! ```
+
+#![allow(clippy::print_stdout)]
+
 use pinger::{ping_async, PingOptions, PingResult};
 use std::time::Duration;
 

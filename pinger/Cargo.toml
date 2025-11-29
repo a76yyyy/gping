@@ -36,3 +36,39 @@ tokio = { version = "1.0", features = ["full", "test-util"] }
 default = ["async"]
 async = ["tokio", "async-trait"]
 fake-ping = ["rand"]
+
+[lints.rust]
+# 强烈建议：作为库，公开的 API 必须有文档
+missing_docs = "warn"
+
+[lints.clippy]
+# --- 1. 安全性与健壮性 ---
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+exit = "deny"             # 禁止库杀进程
+
+# --- 2. 保持输出纯净 ---
+print_stdout = "deny" # 禁止 println!
+print_stderr = "deny" # 禁止 eprintln!
+dbg_macro = "deny"
+
+# --- 3. API 设计规范 ---
+doc_markdown = "warn"       # 检查文档中的代码块格式
+missing_panics_doc = "warn" # 强制文档说明潜在 Panic
+missing_errors_doc = "warn" # 强制文档说明错误原因
+inherent_to_string = "deny" # 强制实现 Display trait
+
+# --- 4. 潜在 Bug 预防 ---
+float_cmp = "deny"
+wildcard_imports = "deny"
+
+# 强烈建议：作为库，公开的 API 必须有文档
+pedantic = { level = "warn", priority = -1 }
+
+# 以下通常建议在 Library 中允许 (Allow)，避免过度干扰：
+module_name_repetitions = "allow"  # 允许 foo::FooError (有些库喜欢这样导出)
+must_use_candidate = "allow"       # 很多简单函数不需要强制 #[must_use]
+return_self_not_must_use = "allow"
+match_same_arms = "allow"

@@ -1,6 +1,8 @@
+//! macOS-specific ping implementation
+
 use crate::bsd::parse_bsd;
 use crate::{PingCreationError, PingOptions, PingResult, Pinger};
-use lazy_regex::*;
+use lazy_regex::{lazy_regex, Lazy, Regex};
 
 #[cfg(feature = "async")]
 use crate::AsyncPinger;

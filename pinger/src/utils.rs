@@ -1,4 +1,5 @@
-/// Utility functions for pinger
+//! Utility functions for ping operations
+
 use crate::target::{IPVersion, Target};
 use crate::PingCreationError;
 use std::net::{IpAddr, ToSocketAddrs};
@@ -29,11 +30,10 @@ fn resolve_ip(target: &str, version: IPVersion) -> Result<IpAddr, PingCreationEr
         })
         .collect();
 
-    if selected_ips.is_empty() {
-        return Err(PingCreationError::HostnameError(target.to_string()));
-    }
-
-    Ok(selected_ips[0].ip())
+    selected_ips
+        .first()
+        .map(std::net::SocketAddr::ip)
+        .ok_or_else(|| PingCreationError::HostnameError(target.to_string()))
 }
 
 /// Resolve target and return valid IP address
@@ -61,6 +61,7 @@ pub fn resolve_target(target: &Target) -> Result<IpAddr, PingCreationError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

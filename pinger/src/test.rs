@@ -1,4 +1,11 @@
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::print_stderr,
+    clippy::indexing_slicing
+)]
 mod tests {
     #[cfg(unix)]
     use crate::bsd::BSDPinger;
@@ -18,7 +25,7 @@ mod tests {
     #[test]
     #[timeout(20_000)]
     fn test_integration_any() {
-        run_integration_test(PingOptions::new(
+        run_integration_test(&PingOptions::new(
             "tomforb.es",
             Duration::from_millis(500),
             None,
@@ -28,7 +35,7 @@ mod tests {
     #[test]
     #[timeout(20_000)]
     fn test_integration_ipv4() {
-        run_integration_test(PingOptions::new_ipv4(
+        run_integration_test(&PingOptions::new_ipv4(
             "tomforb.es",
             Duration::from_millis(500),
             None,
@@ -38,7 +45,7 @@ mod tests {
     #[test]
     #[timeout(20_000)]
     fn test_integration_ip6() {
-        let res = run_integration_test(PingOptions::new_ipv6(
+        let res = run_integration_test(&PingOptions::new_ipv6(
             "::1",
             Duration::from_millis(500),
             None,
@@ -47,7 +54,7 @@ mod tests {
         // IPv6 tests are allowed to fail when IPv6 is not available
         // Check if the error is specifically about IPv6 not being available
         match res {
-            Ok(_) => {
+            Ok(()) => {
                 // Test passed, IPv6 is available
             }
             Err(e) => {
@@ -60,16 +67,16 @@ mod tests {
                     eprintln!("IPv6 test skipped: IPv6 is not available on this system");
                 } else if IS_GHA {
                     // On CI, allow any IPv6 failure
-                    eprintln!("IPv6 test failed on CI (expected): {:?}", e);
+                    eprintln!("IPv6 test failed on CI (expected): {e:?}");
                 } else {
                     // On local machines with unexpected errors, fail the test
-                    panic!("Unexpected IPv6 test failure: {:?}", e);
+                    panic!("Unexpected IPv6 test failure: {e:?}");
                 }
             }
         }
     }
 
-    fn run_integration_test(options: PingOptions) -> anyhow::Result<()> {
+    fn run_integration_test(options: &PingOptions) -> anyhow::Result<()> {
         let stream = crate::ping(options.clone())?;
 
         let mut success = 0;
@@ -78,11 +85,11 @@ mod tests {
         for message in stream.into_iter().take(3) {
             match message {
                 PingResult::Pong(_, m) | PingResult::Timeout(m) => {
-                    eprintln!("Message: {}", m);
+                    eprintln!("Message: {m}");
                     success += 1;
                 }
                 PingResult::Unknown(line) => {
-                    eprintln!("Unknown line: {}", line);
+                    eprintln!("Unknown line: {line}");
                     errors += 1;
                 }
                 PingResult::PingExited(code, stderr) => {
@@ -107,8 +114,8 @@ mod tests {
     fn run_parser_test(contents: &str, pinger: &impl Pinger) {
         let parser = pinger.parse_fn();
         let test_file: Vec<&str> = contents.split("-----").collect();
-        let input = test_file[0].trim().split('\n');
-        let expected: Vec<&str> = test_file[1].trim().split('\n').collect();
+        let input = test_file[0].lines();
+        let expected: Vec<&str> = test_file[1].lines().collect();
         let parsed: Vec<Option<PingResult>> = input.map(|l| parser(l.to_string())).collect();
 
         assert_eq!(
@@ -125,9 +132,9 @@ mod tests {
                     format!("{value}").trim(),
                     expected.trim(),
                     "Failed at idx {idx}"
-                )
+                );
             } else {
-                assert_eq!("None", expected.trim(), "Failed at idx {idx}")
+                assert_eq!("None", expected.trim(), "Failed at idx {idx}");
             }
         }
     }
@@ -206,6 +213,12 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "async"))]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::print_stderr
+)]
 mod async_tests {
     use crate::{ping_async, PingOptions, PingResult};
     use anyhow::bail;
@@ -250,7 +263,7 @@ mod async_tests {
         // IPv6 tests are allowed to fail when IPv6 is not available
         // Check if the error is specifically about IPv6 not being available
         match res {
-            Ok(_) => {
+            Ok(()) => {
                 // Test passed, IPv6 is available
             }
             Err(e) => {
@@ -263,10 +276,10 @@ mod async_tests {
                     eprintln!("IPv6 test skipped: IPv6 is not available on this system");
                 } else if IS_GHA {
                     // On CI, allow any IPv6 failure
-                    eprintln!("IPv6 test failed on CI (expected): {:?}", e);
+                    eprintln!("IPv6 test failed on CI (expected): {e:?}");
                 } else {
                     // On local machines with unexpected errors, fail the test
-                    panic!("Unexpected IPv6 test failure: {:?}", e);
+                    panic!("Unexpected IPv6 test failure: {e:?}");
                 }
             }
         }
@@ -280,12 +293,12 @@ mod async_tests {
 
         for _ in 0..3 {
             match stream.recv().await {
-                Some(PingResult::Pong(_, m)) | Some(PingResult::Timeout(m)) => {
-                    eprintln!("Message: {}", m);
+                Some(PingResult::Pong(_, m) | PingResult::Timeout(m)) => {
+                    eprintln!("Message: {m}");
                     success += 1;
                 }
                 Some(PingResult::Unknown(line)) => {
-                    eprintln!("Unknown line: {}", line);
+                    eprintln!("Unknown line: {line}");
                     errors += 1;
                 }
                 Some(PingResult::PingExited(code, stderr)) => {

@@ -66,15 +66,23 @@ pub mod target;
 mod test;
 pub mod utils;
 
+/// Configuration options for ping operations
 #[derive(Debug, Clone)]
 pub struct PingOptions {
+    /// Target address to ping
     pub target: Target,
+    /// Interval between ping requests
     pub interval: Duration,
+    /// Network interface to use (optional)
     pub interface: Option<String>,
+    /// Additional raw arguments to pass to the ping command (optional)
     pub raw_arguments: Option<Vec<String>>,
 }
 
 impl PingOptions {
+    /// Add raw arguments to pass to the ping command
+    ///
+    /// These arguments will be passed directly to the underlying ping command.
     pub fn with_raw_arguments(mut self, raw_arguments: Vec<impl ToString>) -> Self {
         self.raw_arguments = Some(
             raw_arguments
@@ -87,6 +95,7 @@ impl PingOptions {
 }
 
 impl PingOptions {
+    /// Create new ping options from a target
     pub fn from_target(target: Target, interval: Duration, interface: Option<String>) -> Self {
         Self {
             target,
@@ -95,19 +104,34 @@ impl PingOptions {
             raw_arguments: None,
         }
     }
+
+    /// Create new ping options with any IP version
+    ///
+    /// The target can be an IP address or hostname that resolves to either IPv4 or IPv6.
     pub fn new(target: impl ToString, interval: Duration, interface: Option<String>) -> Self {
         Self::from_target(Target::new_any(target), interval, interface)
     }
 
+    /// Create new ping options constrained to IPv4
+    ///
+    /// The target can be an IPv4 address or hostname that must resolve to IPv4.
     pub fn new_ipv4(target: impl ToString, interval: Duration, interface: Option<String>) -> Self {
         Self::from_target(Target::new_ipv4(target), interval, interface)
     }
 
+    /// Create new ping options constrained to IPv6
+    ///
+    /// The target can be an IPv6 address or hostname that must resolve to IPv6.
     pub fn new_ipv6(target: impl ToString, interval: Duration, interface: Option<String>) -> Self {
         Self::from_target(Target::new_ipv6(target), interval, interface)
     }
 }
 
+/// Run a ping command synchronously
+///
+/// # Errors
+///
+/// - [`PingCreationError::SpawnError`] - The command fails to spawn.
 pub fn run_ping(
     cmd: impl AsRef<OsStr> + Debug,
     args: Vec<impl AsRef<OsStr> + Debug>,
@@ -123,6 +147,11 @@ pub fn run_ping(
         .spawn()?)
 }
 
+/// Run a ping command asynchronously
+///
+/// # Errors
+///
+/// - [`PingCreationError::SpawnError`] - The command fails to spawn.
 #[cfg(feature = "async")]
 pub async fn run_ping_async(
     cmd: impl AsRef<OsStr> + Debug,
@@ -142,12 +171,7 @@ pub async fn run_ping_async(
 
 pub(crate) fn extract_regex(regex: &Regex, line: String) -> Option<PingResult> {
     let cap = regex.captures(&line)?;
-    let ms = cap
-        .name("ms")
-        .expect("No capture group named 'ms'")
-        .as_str()
-        .parse::<u64>()
-        .ok()?;
+    let ms = cap.name("ms")?.as_str().parse::<u64>().ok()?;
     let ns = match cap.name("ns") {
         None => 0,
         Some(cap) => {
@@ -161,21 +185,38 @@ pub(crate) fn extract_regex(regex: &Regex, line: String) -> Option<PingResult> {
     Some(PingResult::Pong(duration, line))
 }
 
+/// Trait for platform-specific ping implementations
 pub trait Pinger: Send + Sync {
+    /// Create a new pinger from options
+    ///
+    /// # Errors
+    ///
+    /// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+    /// - [`PingCreationError::NotSupported`] - The ping command is not supported
+    /// - [`PingCreationError::SpawnError`] - The command fails to spawn
     fn from_options(options: PingOptions) -> std::result::Result<Self, PingCreationError>
     where
         Self: Sized;
 
+    /// Get the parser function for this platform's ping output
     fn parse_fn(&self) -> fn(String) -> Option<PingResult>;
 
+    /// Get the command and arguments for this platform's ping
     fn ping_args(&self) -> (&str, Vec<String>);
 
+    /// Start the ping process and return a receiver for results
+    ///
+    /// # Errors
+    ///
+    /// - [`PingCreationError::SpawnError`] - The ping process fails to start or stdout cannot be captured
     fn start(&self) -> Result<mpsc::Receiver<PingResult>, PingCreationError> {
         let (tx, rx) = mpsc::channel();
         let (cmd, args) = self.ping_args();
 
         let mut child = run_ping(cmd, args)?;
-        let stdout = child.stdout.take().expect("child did not have a stdout");
+        let stdout = child.stdout.take().ok_or_else(|| {
+            PingCreationError::SpawnError(std::io::Error::other("child did not have a stdout"))
+        })?;
 
         let parse_fn = self.parse_fn();
 
@@ -193,8 +234,12 @@ pub trait Pinger: Send + Sync {
                     Err(_) => break,
                 }
             }
-            let result = child.wait_with_output().expect("Child wasn't started?");
-            let decoded_stderr = String::from_utf8(result.stderr).expect("Error decoding stderr");
+            let result = match child.wait_with_output() {
+                Ok(r) => r,
+                Err(_) => return,
+            };
+            let decoded_stderr =
+                String::from_utf8(result.stderr).unwrap_or_else(|_| "<invalid UTF-8>".to_string());
             let _ = tx.send(PingResult::PingExited(result.status, decoded_stderr));
         });
 
@@ -202,17 +247,32 @@ pub trait Pinger: Send + Sync {
     }
 }
 
+/// Trait for platform-specific asynchronous ping implementations
 #[cfg(feature = "async")]
 #[async_trait]
 pub trait AsyncPinger: Send + Sync {
+    /// Create a new async pinger from options
+    ///
+    /// # Errors
+    ///
+    /// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+    /// - [`PingCreationError::NotSupported`] - The ping command is not supported
+    /// - [`PingCreationError::SpawnError`] - The command fails to spawn
     async fn from_options(options: PingOptions) -> std::result::Result<Self, PingCreationError>
     where
         Self: Sized;
 
+    /// Get the parser function for this platform's ping output
     fn parse_fn(&self) -> fn(String) -> Option<PingResult>;
 
+    /// Get the command and arguments for this platform's ping
     fn ping_args(&self) -> (&str, Vec<String>);
 
+    /// Start the ping process asynchronously and return a receiver for results
+    ///
+    /// # Errors
+    ///
+    /// - [`PingCreationError::SpawnError`] - The ping process fails to start or stdout/stderr cannot be captured
     async fn start(
         &self,
     ) -> Result<tokio::sync::mpsc::UnboundedReceiver<PingResult>, PingCreationError> {
@@ -220,8 +280,12 @@ pub trait AsyncPinger: Send + Sync {
         let (cmd, args) = self.ping_args();
 
         let mut child = run_ping_async(cmd, args).await?;
-        let stdout = child.stdout.take().expect("child did not have a stdout");
-        let stderr = child.stderr.take().expect("child did not have a stderr");
+        let stdout = child.stdout.take().ok_or_else(|| {
+            PingCreationError::SpawnError(std::io::Error::other("child did not have a stdout"))
+        })?;
+        let stderr = child.stderr.take().ok_or_else(|| {
+            PingCreationError::SpawnError(std::io::Error::other("child did not have a stderr"))
+        })?;
 
         let parse_fn = self.parse_fn();
 
@@ -289,11 +353,16 @@ pub trait AsyncPinger: Send + Sync {
     }
 }
 
+/// Result of a ping operation
 #[derive(Debug)]
 pub enum PingResult {
+    /// Successful ping response with round-trip time and raw output line
     Pong(Duration, String),
+    /// Ping timeout with raw output line
     Timeout(String),
+    /// Unknown ping output line that couldn't be parsed
     Unknown(String),
+    /// Ping process exited with status and stderr output
     PingExited(ExitStatus, String),
 }
 
@@ -308,23 +377,40 @@ impl fmt::Display for PingResult {
     }
 }
 
+/// Errors that can occur when creating a ping process
 #[derive(Error, Debug)]
 pub enum PingCreationError {
+    /// Could not detect the ping command version
     #[error("Could not detect ping. Stderr: {stderr:?}\nStdout: {stdout:?}")]
     UnknownPing {
+        /// Standard error output
         stderr: Vec<String>,
+        /// Standard output
         stdout: Vec<String>,
     },
+    /// Error spawning the ping process
     #[error("Error spawning ping: {0}")]
     SpawnError(#[from] io::Error),
 
+    /// The installed ping command is not supported
     #[error("Installed ping is not supported: {alternative}")]
-    NotSupported { alternative: String },
+    NotSupported {
+        /// Alternative suggestion
+        alternative: String,
+    },
 
+    /// Invalid or unresolvable hostname
     #[error("Invalid or unresolvable hostname {0}")]
     HostnameError(String),
 }
 
+/// Get a platform-specific pinger implementation
+///
+/// # Errors
+///
+/// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+/// - [`PingCreationError::NotSupported`] - The ping command is not supported
+/// - [`PingCreationError::SpawnError`] - The command fails to spawn
 pub fn get_pinger(options: PingOptions) -> std::result::Result<Arc<dyn Pinger>, PingCreationError> {
     #[cfg(feature = "fake-ping")]
     if std::env::var("PINGER_FAKE_PING")
@@ -355,6 +441,11 @@ pub fn get_pinger(options: PingOptions) -> std::result::Result<Arc<dyn Pinger>, 
 }
 
 /// Start pinging an address. The address can be either a hostname or an IP address.
+///
+/// # Errors
+///
+/// Returns [`PingCreationError`] if the pinger cannot be created or started.
+/// See [`get_pinger`] for possible error types.
 pub fn ping(
     options: PingOptions,
 ) -> std::result::Result<mpsc::Receiver<PingResult>, PingCreationError> {
@@ -362,6 +453,13 @@ pub fn ping(
     pinger.start()
 }
 
+/// Get a platform-specific async pinger implementation
+///
+/// # Errors
+///
+/// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+/// - [`PingCreationError::NotSupported`] - The ping command is not supported
+/// - [`PingCreationError::SpawnError`] - The command fails to spawn
 #[cfg(feature = "async")]
 pub async fn get_async_pinger(
     options: PingOptions,
@@ -404,6 +502,12 @@ pub async fn get_async_pinger(
 
 /// Start pinging an address asynchronously. The address can be either a hostname or an IP address.
 /// Requires the `async` feature to be enabled.
+///
+/// # Errors
+///
+/// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+/// - [`PingCreationError::NotSupported`] - The ping command is not supported
+/// - [`PingCreationError::SpawnError`] - The command fails to spawn or stdout/stderr cannot be captured
 #[cfg(feature = "async")]
 pub async fn ping_async(
     options: PingOptions,
