@@ -34,10 +34,7 @@ impl Pinger for MacOSPinger {
             "ping"
         };
         let mut args = vec![
-            format!(
-                "-i{:.1}",
-                self.options.interval.as_millis() as f32 / 1_000_f32
-            ),
+            format!("-i{:.1}", self.options.interval.as_secs_f32()),
             self.options.target.to_string(),
         ];
         if let Some(interface) = &self.options.interface {
@@ -81,10 +78,7 @@ impl AsyncPinger for MacOSAsyncPinger {
             "ping"
         };
         let mut args = vec![
-            format!(
-                "-i{:.1}",
-                self.options.interval.as_millis() as f32 / 1_000_f32
-            ),
+            format!("-i{:.1}", self.options.interval.as_secs_f32()),
             self.options.target.to_string(),
         ];
         if let Some(interface) = &self.options.interface {

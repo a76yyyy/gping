@@ -35,10 +35,7 @@ impl Pinger for BSDPinger {
     }
 
     fn ping_args(&self) -> (&str, Vec<String>) {
-        let mut args = vec![format!(
-            "-i{:.1}",
-            self.options.interval.as_millis() as f32 / 1_000_f32
-        )];
+        let mut args = vec![format!("-i{:.1}", self.options.interval.as_secs_f32())];
         if let Some(interface) = &self.options.interface {
             args.push("-I".into());
             args.push(interface.clone());
@@ -73,10 +70,7 @@ impl AsyncPinger for BSDAsyncPinger {
     }
 
     fn ping_args(&self) -> (&str, Vec<String>) {
-        let mut args = vec![format!(
-            "-i{:.1}",
-            self.options.interval.as_millis() as f32 / 1_000_f32
-        )];
+        let mut args = vec![format!("-i{:.1}", self.options.interval.as_secs_f32())];
         if let Some(interface) = &self.options.interface {
             args.push("-I".into());
             args.push(interface.clone());

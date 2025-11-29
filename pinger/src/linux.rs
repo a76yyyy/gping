@@ -90,7 +90,7 @@ impl Pinger for LinuxPinger {
 
                 let mut args = vec![
                     options.target.to_string(),
-                    format!("-i{:.1}", options.interval.as_millis() as f32 / 1_000_f32),
+                    format!("-i{:.1}", options.interval.as_secs_f32()),
                 ];
 
                 if let Some(raw_args) = &options.raw_arguments {
@@ -110,7 +110,7 @@ impl Pinger for LinuxPinger {
                 // See https://superuser.com/questions/270083/linux-ping-show-time-out
                 let mut args = vec![
                     "-O".to_string(),
-                    format!("-i{:.1}", options.interval.as_millis() as f32 / 1_000_f32),
+                    format!("-i{:.1}", options.interval.as_secs_f32()),
                 ];
                 if let Some(interface) = &options.interface {
                     args.push("-I".into());
@@ -213,7 +213,7 @@ impl AsyncPinger for LinuxAsyncPinger {
 
                 let mut args = vec![
                     options.target.to_string(),
-                    format!("-i{:.1}", options.interval.as_millis() as f32 / 1_000_f32),
+                    format!("-i{:.1}", options.interval.as_secs_f32()),
                 ];
 
                 if let Some(raw_args) = &options.raw_arguments {
@@ -233,7 +233,7 @@ impl AsyncPinger for LinuxAsyncPinger {
                 // See https://superuser.com/questions/270083/linux-ping-show-time-out
                 let mut args = vec![
                     "-O".to_string(),
-                    format!("-i{:.1}", options.interval.as_millis() as f32 / 1_000_f32),
+                    format!("-i{:.1}", options.interval.as_secs_f32()),
                 ];
                 if let Some(interface) = &options.interface {
                     args.push("-I".into());
