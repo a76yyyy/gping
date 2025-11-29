@@ -114,8 +114,8 @@ mod tests {
     fn run_parser_test(contents: &str, pinger: &impl Pinger) {
         let parser = pinger.parse_fn();
         let test_file: Vec<&str> = contents.split("-----").collect();
-        let input = test_file[0].lines();
-        let expected: Vec<&str> = test_file[1].lines().collect();
+        let input = test_file[0].trim().lines();
+        let expected: Vec<&str> = test_file[1].trim().lines().collect();
         let parsed: Vec<Option<PingResult>> = input.map(|l| parser(l.to_string())).collect();
 
         assert_eq!(
