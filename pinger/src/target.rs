@@ -46,8 +46,8 @@ impl Target {
     ///
     /// If the string is a valid IP address, it will be used directly.
     /// Otherwise, it will be treated as a hostname that can resolve to either IPv4 or IPv6.
-    pub fn new_any(value: impl ToString) -> Self {
-        let value = value.to_string();
+    pub fn new_any(value: impl Into<String>) -> Self {
+        let value = value.into();
         if let Ok(ip) = value.parse::<IpAddr>() {
             return Self::IP(ip);
         }
@@ -61,13 +61,13 @@ impl Target {
     ///
     /// If the string is a valid IPv4 address, it will be used directly.
     /// Otherwise, it will be treated as a hostname that must resolve to IPv4.
-    pub fn new_ipv4(value: impl ToString) -> Self {
-        let value = value.to_string();
+    pub fn new_ipv4(value: impl Into<String>) -> Self {
+        let value = value.into();
         if let Ok(ip) = value.parse::<Ipv4Addr>() {
             return Self::IP(IpAddr::V4(ip));
         }
         Self::Hostname {
-            domain: value.to_string(),
+            domain: value,
             version: IPVersion::V4,
         }
     }
@@ -76,13 +76,13 @@ impl Target {
     ///
     /// If the string is a valid IPv6 address, it will be used directly.
     /// Otherwise, it will be treated as a hostname that must resolve to IPv6.
-    pub fn new_ipv6(value: impl ToString) -> Self {
-        let value = value.to_string();
+    pub fn new_ipv6(value: impl Into<String>) -> Self {
+        let value = value.into();
         if let Ok(ip) = value.parse::<Ipv6Addr>() {
             return Self::IP(IpAddr::V6(ip));
         }
         Self::Hostname {
-            domain: value.to_string(),
+            domain: value,
             version: IPVersion::V6,
         }
     }

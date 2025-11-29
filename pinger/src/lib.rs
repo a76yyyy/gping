@@ -108,21 +108,29 @@ impl PingOptions {
     /// Create new ping options with any IP version
     ///
     /// The target can be an IP address or hostname that resolves to either IPv4 or IPv6.
-    pub fn new(target: impl ToString, interval: Duration, interface: Option<String>) -> Self {
+    pub fn new(target: impl Into<String>, interval: Duration, interface: Option<String>) -> Self {
         Self::from_target(Target::new_any(target), interval, interface)
     }
 
     /// Create new ping options constrained to IPv4
     ///
     /// The target can be an IPv4 address or hostname that must resolve to IPv4.
-    pub fn new_ipv4(target: impl ToString, interval: Duration, interface: Option<String>) -> Self {
+    pub fn new_ipv4(
+        target: impl Into<String>,
+        interval: Duration,
+        interface: Option<String>,
+    ) -> Self {
         Self::from_target(Target::new_ipv4(target), interval, interface)
     }
 
     /// Create new ping options constrained to IPv6
     ///
     /// The target can be an IPv6 address or hostname that must resolve to IPv6.
-    pub fn new_ipv6(target: impl ToString, interval: Duration, interface: Option<String>) -> Self {
+    pub fn new_ipv6(
+        target: impl Into<String>,
+        interval: Duration,
+        interface: Option<String>,
+    ) -> Self {
         Self::from_target(Target::new_ipv6(target), interval, interface)
     }
 }
@@ -132,12 +140,17 @@ impl PingOptions {
 /// # Errors
 ///
 /// - [`PingCreationError::SpawnError`] - The command fails to spawn.
+///
+/// # Note
+///
+/// The `Debug` trait bound is kept for debugging purposes, even though it's not used in the function body.
+/// This allows callers to debug-print the arguments if needed.
 pub fn run_ping(
     cmd: impl AsRef<OsStr> + Debug,
-    args: Vec<impl AsRef<OsStr> + Debug>,
+    args: impl IntoIterator<Item = impl AsRef<OsStr> + Debug>,
 ) -> Result<Child, PingCreationError> {
     Ok(Command::new(cmd.as_ref())
-        .args(&args)
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         // Required to ensure that the output is formatted in the way we expect, not
@@ -152,13 +165,18 @@ pub fn run_ping(
 /// # Errors
 ///
 /// - [`PingCreationError::SpawnError`] - The command fails to spawn.
+///
+/// # Note
+///
+/// The `Debug` trait bound is kept for debugging purposes, even though it's not used in the function body.
+/// This allows callers to debug-print the arguments if needed.
 #[cfg(feature = "async")]
 pub async fn run_ping_async(
     cmd: impl AsRef<OsStr> + Debug,
-    args: Vec<impl AsRef<OsStr> + Debug>,
+    args: impl IntoIterator<Item = impl AsRef<OsStr> + Debug>,
 ) -> Result<tokio::process::Child, PingCreationError> {
     Ok(tokio::process::Command::new(cmd.as_ref())
-        .args(&args)
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         // Required to ensure that the output is formatted in the way we expect, not
@@ -176,7 +194,7 @@ pub(crate) fn extract_regex(regex: &Regex, line: String) -> Option<PingResult> {
         None => 0,
         Some(cap) => {
             let matched_str = cap.as_str();
-            let number_of_digits = matched_str.len() as u32;
+            let number_of_digits = u32::try_from(matched_str.len().min(6)).unwrap_or(6);
             let fractional_ms = matched_str.parse::<u64>().ok()?;
             fractional_ms * (10u64.pow(6 - number_of_digits))
         }
@@ -234,9 +252,8 @@ pub trait Pinger: Send + Sync {
                     Err(_) => break,
                 }
             }
-            let result = match child.wait_with_output() {
-                Ok(r) => r,
-                Err(_) => return,
+            let Ok(result) = child.wait_with_output() else {
+                return;
             };
             let decoded_stderr =
                 String::from_utf8(result.stderr).unwrap_or_else(|_| "<invalid UTF-8>".to_string());
@@ -413,10 +430,7 @@ pub enum PingCreationError {
 /// - [`PingCreationError::SpawnError`] - The command fails to spawn
 pub fn get_pinger(options: PingOptions) -> std::result::Result<Arc<dyn Pinger>, PingCreationError> {
     #[cfg(feature = "fake-ping")]
-    if std::env::var("PINGER_FAKE_PING")
-        .map(|e| e == "1")
-        .unwrap_or_default()
-    {
+    if std::env::var("PINGER_FAKE_PING").is_ok_and(|e| e == "1") {
         return Ok(Arc::new(fake::FakePinger::from_options(options)?));
     }
 
@@ -465,10 +479,7 @@ pub async fn get_async_pinger(
     options: PingOptions,
 ) -> std::result::Result<Arc<dyn AsyncPinger>, PingCreationError> {
     #[cfg(feature = "fake-ping")]
-    if std::env::var("PINGER_FAKE_PING")
-        .map(|e| e == "1")
-        .unwrap_or_default()
-    {
+    if std::env::var("PINGER_FAKE_PING").is_ok_and(|e| e == "1") {
         return Ok(Arc::new(
             fake::FakeAsyncPinger::from_options(options).await?,
         ));
