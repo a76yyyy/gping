@@ -11,13 +11,15 @@ use async_trait::async_trait;
 /// Type alias for lazy regex pattern
 type LazyRegex = Lazy<Regex>;
 
+/// Regular expression for parsing Ubuntu/Debian ping output
 pub static UBUNTU_RE: LazyRegex = lazy_regex!(r"(?i-u)time=(?P<ms>\d+)(?:\.(?P<ns>\d+))? *ms");
 
+/// Linux ping implementation variants
 #[derive(Debug)]
 pub enum LinuxPinger {
-    // Alpine
+    /// `BusyBox` ping (Alpine Linux)
     BusyBox(PingOptions),
-    // Debian, Ubuntu, etc
+    /// `IPTools` ping (Debian, Ubuntu, etc.)
     IPTools(PingOptions),
 }
 
@@ -139,12 +141,13 @@ impl Pinger for LinuxPinger {
 
 // =================== Async Implementation ===================
 
+/// Linux async ping implementation variants
 #[cfg(feature = "async")]
 #[derive(Debug)]
 pub enum LinuxAsyncPinger {
-    // Alpine
+    /// `BusyBox` ping (Alpine Linux)
     BusyBox(PingOptions),
-    // Debian, Ubuntu, etc
+    /// `IPTools` ping (Debian, Ubuntu, etc.)
     IPTools(PingOptions),
 }
 

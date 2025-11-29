@@ -9,6 +9,7 @@ use async_trait::async_trait;
 /// Type alias for lazy regex pattern
 type LazyRegex = Lazy<Regex>;
 
+/// Regular expression for parsing BSD ping output
 pub static RE: LazyRegex = lazy_regex!(r"time=(?:(?P<ms>[0-9]+).(?P<ns>[0-9]+)\s+ms)");
 
 pub struct BSDPinger {

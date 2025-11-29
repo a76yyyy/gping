@@ -43,7 +43,10 @@ fn resolve_ip(target: &str, version: IPVersion) -> Result<IpAddr, PingCreationEr
 ///
 /// # Returns
 /// * `Ok(IpAddr)` - Successfully resolved IP address
-/// * `Err(PingCreationError)` - Resolution failed
+///
+/// # Errors
+///
+/// - [`PingCreationError::HostnameError`] - The hostname cannot be resolved
 ///
 /// # Examples
 /// ```

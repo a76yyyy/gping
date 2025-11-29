@@ -12,8 +12,10 @@ use async_trait::async_trait;
 /// Type alias for lazy regex pattern
 type LazyRegex = Lazy<Regex>;
 
+/// Regular expression for parsing macOS ping output
 pub static RE: LazyRegex = lazy_regex!(r"time=(?:(?P<ms>[0-9]+).(?P<ns>[0-9]+)\s+ms)");
 
+/// macOS ping implementation
 pub struct MacOSPinger {
     options: PingOptions,
 }
@@ -55,6 +57,7 @@ impl Pinger for MacOSPinger {
 
 // =================== Async Implementation ===================
 
+/// macOS async ping implementation
 #[cfg(feature = "async")]
 pub struct MacOSAsyncPinger {
     options: PingOptions,

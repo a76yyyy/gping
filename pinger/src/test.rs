@@ -330,11 +330,11 @@ mod async_tests {
         for _ in 0..5 {
             match stream.recv().await {
                 Some(PingResult::Pong(duration, _)) => {
-                    eprintln!("Fake ping: {:?}", duration);
+                    eprintln!("Fake ping: {duration:?}");
                     count += 1;
                 }
                 Some(other) => {
-                    panic!("Unexpected result: {:?}", other);
+                    panic!("Unexpected result: {other:?}");
                 }
                 None => break,
             }
