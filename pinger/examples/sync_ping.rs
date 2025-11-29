@@ -5,7 +5,7 @@
 //! cargo run --example sync_ping
 //! ```
 
-#![allow(clippy::print_stdout)]
+#![allow(clippy::print_stdout, missing_docs)]
 
 use pinger::{ping, PingOptions, PingResult};
 use std::time::Duration;

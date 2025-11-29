@@ -1,4 +1,11 @@
-#![allow(clippy::print_stdout, clippy::panic, clippy::expect_used)]
+//! Simple ping example
+//!
+//! Run with:
+//! ```bash
+//! cargo run --example simple-ping
+//! ```
+
+#![allow(clippy::print_stdout, clippy::panic, clippy::expect_used, missing_docs)]
 
 use pinger::{ping, PingOptions};
 

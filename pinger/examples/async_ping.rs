@@ -5,7 +5,7 @@
 //! cargo run --example async_ping --features async
 //! ```
 
-#![allow(clippy::print_stdout)]
+#![allow(clippy::print_stdout, missing_docs)]
 
 use pinger::{ping_async, PingOptions, PingResult};
 use std::time::Duration;
