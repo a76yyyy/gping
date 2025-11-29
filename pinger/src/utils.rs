@@ -63,6 +63,66 @@ pub fn resolve_target(target: &Target) -> Result<IpAddr, PingCreationError> {
     }
 }
 
+/// Asynchronously resolve target and return valid IP address using tokio
+///
+/// # Arguments
+/// * `target` - Target address (IP or hostname)
+///
+/// # Returns
+/// * `Ok(IpAddr)` - Successfully resolved IP address
+///
+/// # Errors
+///
+/// - [`PingCreationError::HostnameError`] - The hostname cannot be resolved
+///
+/// # Examples
+/// ```no_run
+/// use pinger::target::Target;
+/// use pinger::utils::resolve_target_async;
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let target = Target::new_any("google.com");
+///     let ip = resolve_target_async(&target).await.unwrap();
+/// }
+/// ```
+#[cfg(feature = "async")]
+pub async fn resolve_target_async(target: &Target) -> Result<IpAddr, PingCreationError> {
+    match target {
+        Target::IP(ip) => Ok(*ip),
+        Target::Hostname { domain, version } => {
+            // Try to parse directly as IP address first
+            if let Ok(ip) = domain.parse::<IpAddr>() {
+                // Verify IP version matches
+                match version {
+                    IPVersion::V4 if ip.is_ipv4() => return Ok(ip),
+                    IPVersion::V6 if ip.is_ipv6() => return Ok(ip),
+                    IPVersion::Any => return Ok(ip),
+                    _ => return Err(PingCreationError::HostnameError(domain.clone())),
+                }
+            }
+
+            // Resolve as hostname using tokio
+            let lookup = tokio::net::lookup_host((domain.as_str(), 0))
+                .await
+                .map_err(|_| PingCreationError::HostnameError(domain.clone()))?;
+
+            // Filter addresses by IP version
+            for addr in lookup {
+                let ip = addr.ip();
+                match version {
+                    IPVersion::V4 if ip.is_ipv4() => return Ok(ip),
+                    IPVersion::V6 if ip.is_ipv6() => return Ok(ip),
+                    IPVersion::Any => return Ok(ip),
+                    _ => {}
+                }
+            }
+
+            Err(PingCreationError::HostnameError(domain.clone()))
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -118,6 +178,67 @@ mod tests {
     fn test_resolve_ipv4_with_ipv6_constraint() {
         let target = Target::new_ipv6("8.8.8.8");
         let result = resolve_target(&target);
+        // Should fail because 8.8.8.8 is IPv4 but IPv6 is required
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_ipv4_address() {
+        let target = Target::new_any("8.8.8.8");
+        let result = resolve_target_async(&target).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_ipv4());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_ipv6_address() {
+        let target = Target::new_any("::1");
+        let result = resolve_target_async(&target).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_ipv6());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_hostname() {
+        let target = Target::new_any("localhost");
+        let result = resolve_target_async(&target).await;
+        assert!(result.is_ok());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_invalid_hostname() {
+        let target = Target::new_any("this-hostname-does-not-exist-12345.invalid");
+        let result = resolve_target_async(&target).await;
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_ipv4_only() {
+        let target = Target::new_ipv4("8.8.8.8");
+        let result = resolve_target_async(&target).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_ipv4());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_ipv6_only() {
+        let target = Target::new_ipv6("::1");
+        let result = resolve_target_async(&target).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_ipv6());
+    }
+
+    #[cfg(feature = "async")]
+    #[tokio::test]
+    async fn test_async_resolve_ipv4_with_ipv6_constraint() {
+        let target = Target::new_ipv6("8.8.8.8");
+        let result = resolve_target_async(&target).await;
         // Should fail because 8.8.8.8 is IPv4 but IPv6 is required
         assert!(result.is_err());
     }
