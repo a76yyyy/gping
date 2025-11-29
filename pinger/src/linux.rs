@@ -8,7 +8,10 @@ use crate::{run_ping_async, AsyncPinger};
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
-pub static UBUNTU_RE: Lazy<Regex> = lazy_regex!(r"(?i-u)time=(?P<ms>\d+)(?:\.(?P<ns>\d+))? *ms");
+/// Type alias for lazy regex pattern
+type LazyRegex = Lazy<Regex>;
+
+pub static UBUNTU_RE: LazyRegex = lazy_regex!(r"(?i-u)time=(?P<ms>\d+)(?:\.(?P<ns>\d+))? *ms");
 
 #[derive(Debug)]
 pub enum LinuxPinger {
@@ -19,6 +22,13 @@ pub enum LinuxPinger {
 }
 
 impl LinuxPinger {
+    /// Detect the platform's ping implementation
+    ///
+    /// # Errors
+    ///
+    /// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+    /// - [`PingCreationError::NotSupported`] - The ping command is not supported
+    /// - [`PingCreationError::SpawnError`] - The command fails to spawn
     pub fn detect_platform_ping(options: PingOptions) -> Result<Self, PingCreationError> {
         let child = run_ping("ping", vec!["-V".to_string()])?;
         let output = child.wait_with_output()?;
@@ -140,6 +150,13 @@ pub enum LinuxAsyncPinger {
 
 #[cfg(feature = "async")]
 impl LinuxAsyncPinger {
+    /// Detect the platform's ping implementation asynchronously
+    ///
+    /// # Errors
+    ///
+    /// - [`PingCreationError::UnknownPing`] - The ping command cannot be detected
+    /// - [`PingCreationError::NotSupported`] - The ping command is not supported
+    /// - [`PingCreationError::SpawnError`] - The command fails to spawn
     pub async fn detect_platform_ping(options: PingOptions) -> Result<Self, PingCreationError> {
         let child = run_ping_async("ping", vec!["-V".to_string()]).await?;
         let output = child.wait_with_output().await?;

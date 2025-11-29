@@ -9,7 +9,7 @@ repository = "https://github.com/orf/gping/tree/master/pinger"
 
 [dependencies]
 thiserror = "2.0.11"
-lazy-regex = "3.4.1"
+lazy-regex = { version = "3.4.2", features = ["std"] }
 rand = { version = "0.9.0", optional = true }
 
 # Async dependencies
@@ -55,10 +55,13 @@ print_stderr = "deny" # 禁止 eprintln!
 dbg_macro = "deny"
 
 # --- 3. API 设计规范 ---
-doc_markdown = "warn"       # 检查文档中的代码块格式
-missing_panics_doc = "warn" # 强制文档说明潜在 Panic
-missing_errors_doc = "warn" # 强制文档说明错误原因
-inherent_to_string = "deny" # 强制实现 Display trait
+doc_markdown = "warn" # 检查文档中的代码块格式
+# Checks if the first paragraph in the documentation of items listed
+# in the module page is too long.
+too_long_first_doc_paragraph = "warn"
+missing_panics_doc = "warn"           # 强制文档说明潜在 Panic
+missing_errors_doc = "warn"           # 强制文档说明错误原因
+inherent_to_string = "deny"           # 强制实现 Display trait
 
 # --- 4. 潜在 Bug 预防 ---
 float_cmp = "deny"

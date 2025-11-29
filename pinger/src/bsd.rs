@@ -6,7 +6,10 @@ use crate::AsyncPinger;
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
-pub static RE: Lazy<Regex> = lazy_regex!(r"time=(?:(?P<ms>[0-9]+).(?P<ns>[0-9]+)\s+ms)");
+/// Type alias for lazy regex pattern
+type LazyRegex = Lazy<Regex>;
+
+pub static RE: LazyRegex = lazy_regex!(r"time=(?:(?P<ms>[0-9]+).(?P<ns>[0-9]+)\s+ms)");
 
 pub struct BSDPinger {
     options: PingOptions,
