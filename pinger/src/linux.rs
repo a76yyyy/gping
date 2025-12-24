@@ -81,7 +81,7 @@ impl Pinger for LinuxPinger {
         |line| {
             #[cfg(test)]
             eprintln!("Got line {line}");
-            if line.starts_with("64 bytes from") {
+            if line.contains("bytes from") && line.contains("time=") {
                 return extract_regex(&UBUNTU_RE, line);
             } else if line.starts_with("no answer yet") {
                 return Some(PingResult::Timeout(line));
@@ -212,7 +212,7 @@ impl AsyncPinger for LinuxAsyncPinger {
         |line| {
             #[cfg(test)]
             eprintln!("Got line {line}");
-            if line.starts_with("64 bytes from") {
+            if line.contains("bytes from") && line.contains("time=") {
                 return extract_regex(&UBUNTU_RE, line);
             } else if line.starts_with("no answer yet") {
                 return Some(PingResult::Timeout(line));
