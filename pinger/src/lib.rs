@@ -227,6 +227,12 @@ pub trait Pinger: Send + Sync {
     /// # Errors
     ///
     /// - [`PingCreationError::SpawnError`] - The ping process fails to start or stdout cannot be captured
+    ///
+    /// # Notes
+    ///
+    /// Due to limitations of `std::sync::mpsc::Sender`, the child process may not be immediately
+    /// terminated when the receiver is dropped if the parse function continuously returns `None`.
+    /// Consider using the async version ([`AsyncPinger::start`]) for better resource cleanup.
     fn start(&self) -> Result<mpsc::Receiver<PingResult>, PingCreationError> {
         let (tx, rx) = mpsc::channel();
         let (cmd, args) = self.ping_args();
@@ -322,10 +328,21 @@ pub trait AsyncPinger: Send + Sync {
 
             // Read output
             while let Ok(Some(msg)) = lines.next_line().await {
+                // Check if receiver is closed (even if parse_fn returns None)
+                if tx.is_closed() {
+                    // Receiver closed (dropped by caller), kill child process and exit
+                    let _ = child.kill().await;
+                    // Cancel stderr task
+                    stderr_task.abort();
+                    return;
+                }
+
                 if let Some(result) = parse_fn(msg) {
                     if tx.send(result).is_err() {
-                        // Receiver closed, terminate process
+                        // Receiver closed (dropped by caller), kill child process and exit
                         let _ = child.kill().await;
+                        // Cancel stderr task
+                        stderr_task.abort();
                         return;
                     }
                 }
